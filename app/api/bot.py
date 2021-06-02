@@ -195,14 +195,25 @@ def users(message):
         start(message)
     total = 0
     query = User.query.filter(User.visible==True)
-    for query_user in query:
-        if user.tags:
+    if user.tags:
+        print(
+            "user's tags: ", user.tags
+        )
+        for query_user in query:
             if query_user.tags:
+                print(
+                    'query_user',
+                    'username: ', query_user.username,
+                    'tags: ', query_user.tags
+                )
                 query_user.score = 0
                 for tag in user.tags:
+                    print(
+                        'tag: ', tag
+                    )
                     try:
                         result = process.extractOne(tag, query_user.tags, scorer=fuzz.ratio)
-                        print('users result', result)
+                        print('user result', result)
                         if result:
                             score = result[1]   
                             if score:
@@ -225,12 +236,12 @@ def users(message):
                     )
                 total*=100
                 query_user.score = query_user.score/total * 100
-        else:
-            bot.sendMessage(
-                user.id,
-                'add tags with /add'
-            )
-            return
+    else:
+        bot.sendMessage(
+            user.id,
+            'add tags with /add'
+        )
+        return
     db.session.commit()
     if '/location' in message['text']:
         print('location', user.location)
