@@ -201,16 +201,19 @@ def users(message):
                 query_user.score = 0
                 for tag in user.tags:
                     try:
-                        score = process.extractOne(tag, query_user.tags, scorer=fuzz.partial_ratio)[1]
-                        if score:
-                            query_user.score += score
-                            total += 1
+                        result = process.extractOne(tag, query_user.tags, scorer=fuzz.partial_ratio)
+                        print('users result', result)
+                        if result:
+                            score = result[1]   
+                            if score:
+                                query_user.score += score
+                                total += 1
                     except Exception as e:
                         print('users exception', e)
                         pass
                 if not query_user.score or not total or query_user.score < 1 or total < 1:
                     print(
-                        'user error: not query_user.score or total',
+                        'users error: not query_user.score or total',
                         'query_user.score: ',query_user.score, 
                         'total: ', total
                     )
