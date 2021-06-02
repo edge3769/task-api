@@ -127,7 +127,8 @@ def start(message):
         user = User(username, id)
         bot.sendMessage(
             user.id,
-            "you've been added"
+            "You've been added"
+            "use /add to add tags, separate tags with commas"
         )
         return
     else:
@@ -229,9 +230,8 @@ def users(message):
                         print('user result', result)
                         if result:
                             score = result[1]   
-                            if score:
-                                query_user.score += score
-                                total += 1
+                            query_user.score += score
+                            total += 1
                     except Exception as e:
                         print('users exception', e)
                         pass
