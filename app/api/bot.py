@@ -231,12 +231,17 @@ def users(message):
                     )
                     continue
                 print(
-                    'end:',
+                    'end1:',
                     'query_user.score: ', query_user.score,
                     'total: ', total
                     )
                 total*=100
                 query_user.score = query_user.score/total * 100
+                print(
+                    'end2:',
+                    'query_user.score: ', query_user.score,
+                    'total: ', total
+                    )                
             else:
                 query = query.filter(User.id != query_user.id)
     else:
