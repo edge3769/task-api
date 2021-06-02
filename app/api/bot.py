@@ -204,10 +204,17 @@ def users(message):
                     if score:
                         query_user.score += score
                         total += 1
-                except:
+                except Exception as e:
+                    print('users exception', e)
                     pass
         if not query_user.score or not total or query_user.score < 1 or total < 1:
+            print(
+                'user error: not query_user.score or total',
+                'query_user.score: ',query_user.score, 
+                'total: ', total
+            )
             continue
+        print('total: ', total)
         total*=100
         query_user.score = query_user.score/total * 100
     db.session.commit()
