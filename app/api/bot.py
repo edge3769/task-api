@@ -201,7 +201,7 @@ def users(message):
                 query_user.score = 0
                 for tag in user.tags:
                     try:
-                        result = process.extractOne(tag, query_user.tags, scorer=fuzz.partial_ratio)
+                        result = process.extractOne(tag, query_user.tags, scorer=fuzz.ratio)
                         print('users result', result)
                         if result:
                             score = result[1]   
