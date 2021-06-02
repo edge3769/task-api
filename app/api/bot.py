@@ -193,12 +193,6 @@ def users(message):
     user = User.query.get(message['from']['id'])
     if not user:
         start(message)
-    if not user.tags:
-        bot.sendMessage(
-            user.id,
-            'add tags with /add'
-        )
-        return
     total = 0
     query = User.query.filter(User.visible==True)
     for query_user in query:
