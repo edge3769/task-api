@@ -202,7 +202,7 @@ def users(message):
         for query_user in query:
             if query_user.tags:
                 print(
-                    'query_user',
+                    'query_user:',
                     'username: ', query_user.username,
                     'tags: ', query_user.tags
                 )
@@ -230,7 +230,7 @@ def users(message):
                     )
                     continue
                 print(
-                    'end',
+                    'end:',
                     'query_user.score: ', query_user.score,
                     'total: ', total
                     )
