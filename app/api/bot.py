@@ -18,7 +18,7 @@ commands = [
         'name': 'add',
         'desc': """specify a list of comma separated tags to add to your tags
                 e.g: /add dog cat 
-                will add dog and cat from your tags"""
+                will add dog and cat to your tags"""
     },
     {
         'name': 'delete',
@@ -96,6 +96,10 @@ def on(message):
         start(message)
     user.visible = True
     db.session.commit()
+    bot.sendMessage(
+        user.id,
+        'turned on'
+    )
 
 def off(message):
     user = User.query.get(message['from']['id'])
@@ -103,6 +107,10 @@ def off(message):
         start(message)
     user.visible = False
     db.session.commit()
+    bot.sendMessage(
+        user.id,
+        'turned off'
+    )
 
 def start(message):
     user = message['from']
@@ -188,6 +196,10 @@ def delete(message):
             pass
     user.tags = user_tags
     db.session.commit()
+    bot.sendMessage(
+        user.id,
+        'deleted'
+    )
 
 def users(message):
     user = User.query.get(message['from']['id'])
@@ -331,6 +343,10 @@ def add(message):
             user_tags.remove(tag)
     user.tags = user_tags
     db.session.commit()
+    bot.sendMessage(
+        user.id,
+        'added'
+    )
 
 @bp.route('/bot', methods=['POST'])
 def update():
