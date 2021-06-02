@@ -1,0 +1,12 @@
+{
+<<<<<<< HEAD
+=======
+    "python.linting.pylintArgs": [
+        "--load-plugins",
+        "pylint_flask_sqlalchemy",
+        "pylint_flask"
+    ],
+>>>>>>> 076fd3061686b5fbe750a06de1c456a851614e44
+    "python.linting.pylintEnabled": true,
+    "python.linting.enabled": true
+}
