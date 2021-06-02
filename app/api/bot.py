@@ -195,6 +195,7 @@ def users(message):
         start(message)
     total = 0
     query = User.query.filter(User.visible==True)
+    query = User.query.filter(User.id != user.id)
     if user.tags:
         print(
             "user's tags: ", user.tags
@@ -236,6 +237,8 @@ def users(message):
                     )
                 total*=100
                 query_user.score = query_user.score/total * 100
+            else:
+                query = query.filter(User.id != query_user.id)
     else:
         bot.sendMessage(
             user.id,
