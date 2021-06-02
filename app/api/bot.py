@@ -206,7 +206,7 @@ def users(message):
                         total += 1
                 except:
                     pass
-        if query_user.score < 1 or total < 1:
+        if not query_user.score or not total or query_user.score < 1 or total < 1:
             continue
         total*=100
         query_user.score = query_user.score/total * 100
