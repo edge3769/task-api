@@ -227,7 +227,7 @@ def users(message):
     user_list = ''
     for query_user in query:
         if query_user.username:
-            user_string = '@' + query_user.username + str(user.score) + ' %' + '\n'
+            user_string = '@' + query_user.username + ' ' + str(user.score) + '%' + '\n'
             user_list += user_string
     if user_list == '':
         bot.sendMessage(
@@ -300,7 +300,8 @@ def update():
         return '', 200
     message = data['message']
     user = User.query.get(message['from']['id'])
-    print(user.dict())
+    if user:
+        print(user.dict())
     if 'location' in message:
         location(user, message['location'])
     if 'text' in message:
