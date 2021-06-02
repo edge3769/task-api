@@ -285,7 +285,7 @@ def help(message):
     command_list = ''
     for command in commands:
         command_string = ''
-        if 'name' and 'desc' in command:
+        if 'name' in command and 'desc' in command:
             command_string = '/' + command['name'] + ':\n' + command['desc'] +'\n\n'
         elif 'name' in command:
             command_string += '/' + command['name'] + '\n\n'
