@@ -3,6 +3,20 @@ from geopy import distance as dist
 
 email_regex = '^(\w|\.|\_|\-)+[@](\w|\_|\-|\.)+[.]\w{2,3}$'
 
+#TODO
+def check_type(value, type, ref):
+    if isinstance(value, type):
+        return value
+    else:
+        return {'error': f'{ref} must be of type: number'}
+
+def check_int(value, ref):
+    try:
+        value = int(value)
+        return value
+    except:
+        return {'error': f'{ref} must be of type: number'}
+
 def check_email(email):
     if(re.search(email_regex, email)):
         return True

@@ -18,9 +18,9 @@ children = db.Table('children',
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Unicode)
-    note = db.Column(db.Unicode)
     done = db.Column(db.Boolean, default=False)
-    position = db.Column(db.Integer)
+    global_note = db.Column(db.Unicode)
+    global_position = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.datetime.now(datetime.timezone.utc))
     updated_at = db.Column(db.DateTime, default=datetime.datetime.now(datetime.timezone.utc))
     score = db.Column(db.Float)
@@ -37,31 +37,39 @@ class Task(db.Model):
         lazy='dynamic')
 
     @hybrid_property
-    def child_note(self, task):
+    def note(self, parent):
         return db.session.execute(children.select()\
-            .filter(children.c.parent == task.id,\
+            .filter(children.c.parent == parent.id,\
                 children.c.child == self.id))\
                     .first()['note']
     
-    @child_note.setter
-    def child_note(self, task, note:str):
+    def set_note(self, parent, note:str):
         db.session.execute(children.update()\
-            .filter(children.c.parent == task.id,\
+            .filter(children.c.parent == parent.id,\
                 children.c.child == self.id)\
                     .values(note = note))
+        db.session.commit()
+
+    #TODO parent position
 
     @hybrid_property
-    def child_position(self, task):
+    def position(self, parent):
         return db.session.execute(children.select()\
-            .filter(children.c.parent == task.id,\
+            .filter(children.c.parent == parent.id,\
                 children.c.child == self.id))\
                     .first()['position']
     
-    def set_child_position(self, task, position:int):
+    def set_position(self, parent, position:int):
+        # get current position
+        # get 'task_in_place' in req position
+        # set task_in_place to parent = current position
+        # set self position to req position
+        current_position = self.position
         db.session.execute(children.update()\
-            .filter(children.c.parent == task.id, \
+            .filter(children.c.parent == parent.id, \
                 children.c.child == self.id)\
                     .values(position = position))
+        db.session.commit()
     
     def all_done(self):
         return self.progress == 100
@@ -189,7 +197,7 @@ class Task(db.Model):
                 position = last_position + 1
             else:
                 position = 1
-            task.set_child_position(self, position)
+            task.set_position(self, position)
 
     def remove(self, task):
         if self.is_child(task):

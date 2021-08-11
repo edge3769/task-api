@@ -1,8 +1,6 @@
-from typing import List
-
 from flask import request
 from app.api import bp
-from app.misc import cdict
+from app.misc import cdict, check_int
 from app.decorators.req import req
 from app.task_model import Task
 
@@ -93,7 +91,7 @@ def edit_task(req_json=None):
     # tasks to add to task's children
     added_tasks = []
     if add_tasks:
-        if not isinstance(add_tasks, List):
+        if not isinstance(add_tasks, list):
             return {'error': 'add body parameter must be of type: array'}
         for id in add_tasks:
             _task = Task.query.get(id)
@@ -102,7 +100,7 @@ def edit_task(req_json=None):
             added_tasks.append(_task.dict())
             task.add(_task)
 
-    #task to make task's parent      
+    #task to add to task's parents    
     parent_id = req_json('parent')
     if parent_id:
         try:
@@ -115,6 +113,25 @@ def edit_task(req_json=None):
         parent.add(task)
     
     name = req_json('name') #TODO
+
+    positions = req_json('position')
+    if not isinstance(positions, list):
+        return {'error': '"position" body parameter must be of type: array'}
+    for position_obj in positions:
+        if not isinstance(position_obj, dict):
+            return {'error': 'values in "position" body parameter must be of type: object'}
+        try:
+            parent_id = int(position_obj['parent'])
+        except:
+            return {'error': 'parent attribute of value in "position" body parameter must be of type: number'}
+        try:
+            position = int(position_obj['position'])
+        except:
+            return {'error': 'position attribute of value in "position" body parameter must be of type: number'}
+        
+        parent = Task.query.get(parent_id)
+        parent.add(task)
+        task.set_child_position(parent, position)
     
     done = req_json('done')
     if not isinstance(done, bool):
