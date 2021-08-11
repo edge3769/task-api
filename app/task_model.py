@@ -1,6 +1,6 @@
 import datetime
 
-from sqlalchemy.orm import backref, query
+from sqlalchemy.ext.hybrid import hybrid_property
 from app import db
 from fuzzywuzzy import process, fuzz
 
@@ -10,13 +10,17 @@ assignments = db.Table('assignments',
 
 children = db.Table('children',
     db.Column('parent', db.Integer, db.ForeignKey('task.id')),
-    db.Column('child', db.Integer, db.ForeignKey('task.id')))
+    db.Column('child', db.Integer, db.ForeignKey('task.id')),
+    db.Column('position', db.Integer),
+    db.Column('check', db.Integer),
+    db.Column('note', db.Integer))
 
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Unicode)
     note = db.Column(db.Unicode)
     done = db.Column(db.Boolean, default=False)
+    position = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.datetime.now(datetime.timezone.utc))
     updated_at = db.Column(db.DateTime, default=datetime.datetime.now(datetime.timezone.utc))
     score = db.Column(db.Float)
@@ -32,6 +36,33 @@ class Task(db.Model):
         backref=db.backref('task', lazy='dynamic'),
         lazy='dynamic')
 
+    @hybrid_property
+    def child_note(self, task):
+        return db.session.execute(children.select()\
+            .filter(children.c.parent == task.id,\
+                children.c.child == self.id))\
+                    .first()['note']
+    
+    @child_note.setter
+    def child_note(self, task, note:str):
+        db.session.execute(children.update()\
+            .filter(children.c.parent == task.id,\
+                children.c.child == self.id)\
+                    .values(note = note))
+
+    @hybrid_property
+    def child_position(self, task):
+        return db.session.execute(children.select()\
+            .filter(children.c.parent == task.id,\
+                children.c.child == self.id))\
+                    .first()['position']
+    
+    def set_child_position(self, task, position:int):
+        db.session.execute(children.update()\
+            .filter(children.c.parent == task.id, \
+                children.c.child == self.id)\
+                    .values(position = position))
+    
     def all_done(self):
         return self.progress == 100
 
@@ -133,6 +164,9 @@ class Task(db.Model):
         db.session.commit()
 
     def __init__(self, name, task=None):
+        last_position = Task.query.order_by(Task.position.desc()).first().position
+        if last_position:
+            self.position = last_position + 1
         self.name = name
         if task:
             task.add(self)
@@ -147,6 +181,15 @@ class Task(db.Model):
         if not self.is_child(task):
             self.tasks.append(task)
             db.session.commit()
+            last_position = db.session.execute(children.select()\
+                .filter(children.c.parent == self.id)\
+                    .order_by(children.c.position.desc()))\
+                        .first()['position']
+            if last_position:
+                position = last_position + 1
+            else:
+                position = 1
+            task.set_child_position(self, position)
 
     def remove(self, task):
         if self.is_child(task):
