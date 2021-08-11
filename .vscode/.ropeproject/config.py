@@ -54,7 +54,7 @@ def set_prefs(prefs):
 
     # How many undos to hold?
 <<<<<<< HEAD
-    prefs['max_history_items'] = 32
+    prefs['max_history_tasks'] = 32
 =======
     prefs['max_history_groups'] = 32
 >>>>>>> 076fd3061686b5fbe750a06de1c456a851614e44

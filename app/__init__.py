@@ -1,6 +1,7 @@
 import os, logging
 from flask import Flask
 from flask_cors import CORS
+from sqlalchemy.orm import session
 from logging.handlers import SMTPHandler, RotatingFileHandler
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
