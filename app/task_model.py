@@ -1,4 +1,5 @@
 import datetime
+from operator import pos
 
 from sqlalchemy.ext.hybrid import hybrid_property
 from app import db
@@ -58,13 +59,47 @@ class Task(db.Model):
             .filter(children.c.parent == parent.id,\
                 children.c.child == self.id))\
                     .first()['position']
+
+    def shift(self, direction, parent):
+        if direction:
+            self.move_up(parent)
+        else:
+            self.move_down(parent)
+
+    def move_up(self, parent):
+        if not parent:
+            current_position = self.global_position
+            new_position = current_position + 1
+            task_above = Task.query.filter(Task.global_position == new_position)
+            task_above.global_position = current_position
+            self.global_position = new_position
+            db.session.commit()
+        current_position = self.position(parent)
+        new_position = current_position-1
+        task_above = Task.query.filter(Task.position(parent)==new_position)
+        task_above.set_position(parent, current_position)
+        self.set_position(parent, new_position)
+
+    def move_down(self, parent):
+        if not parent:
+            current_position = self.global_position
+            new_position = current_position - 1
+            task_above = Task.query.filter(Task.global_position == new_position)
+            task_above.global_position = current_position
+            self.global_position = new_position
+            db.session.commit()
+        current_position = self.position(parent)
+        new_position = current_position+1
+        task_below = Task.query.filter(Task.position(parent)==new_position)
+        task_below.set_position(parent, current_position)
+        self.set_position(parent, new_position)
     
     def set_position(self, parent, position:int):
-        # get current position
-        # get 'task_in_place' in req position
-        # set task_in_place to parent = current position
-        # set self position to req position
-        current_position = self.position
+        # current_position = self.position(parent)
+        # # 'task' here refers to the task child to the parent arg currently in the position arg
+        # task = Task.query.filter(Task.position(parent)==position)
+        # task.set_position(parent, current_position)
+
         db.session.execute(children.update()\
             .filter(children.c.parent == parent.id, \
                 children.c.child == self.id)\
@@ -101,11 +136,13 @@ class Task(db.Model):
         }
 
     @staticmethod
-    def get(id, search, sort, order, task, depth):
+    def get(id, parents, search, sort, order, task, depth):
         query = Task.query
-        if task:
-            query = query.filter(Task.parents.any(Task.id==task.id))
-            #TODO #maybe# variable depth
+        if id:
+            return query.get(id)
+        if parents:
+            for parent_id in parents:
+                query = query.filter(Task.parents.any(Task.id==parent_id))
         else:
             query = Task.query.except_(query.join(children, children.c.child == Task.id))
         if sort:
@@ -172,7 +209,7 @@ class Task(db.Model):
         db.session.commit()
 
     def __init__(self, name, task=None):
-        last_position = Task.query.order_by(Task.position.desc()).first().position
+        last_position = Task.query.order_by(Task.global_position.desc()).first().global_position
         if last_position:
             self.position = last_position + 1
         self.name = name

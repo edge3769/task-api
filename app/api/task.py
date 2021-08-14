@@ -15,14 +15,26 @@ def get():
             task = Task.query.get(task)
         except: #TODO Exception type
             return {'error': 'task query argument must be a number type'} 
+# parents arg:
+    parents = request.args.get('parents')
+    if parents:
+        if not isinstance(parents, list):
+            return {'error': '"parents" query argument must be a stringified array'}
+        for parent_id in parents:
+            unfound = ''
+            parent_task = Task.query.get(parent_id)
+            if not parent_task:
+                unfound.join(f'{parent_id}, ')
+            if len(unfound):
+                return {'error': f'tasks with ids {unfound} were not found'}
 #id arg:    
     id = request.args.get('id')
     if id:
         try:
             id = int(id)
             return Task.query.get(id).dict()
-        except: #TODO Exception type
-            {'error': 'id query argument must be a number type'}
+        except: 
+            {'error': '"id" query argument must be a number'}
 #page arg
     page = request.args.get('page')
     if page:
@@ -60,7 +72,7 @@ def get():
         if sort != 'time' or sort != 'alpha':
             return {'error': "sort query argument must be either 'time' or 'alpha'"}
 #final return
-    return cdict(Task.get(id, search, sort, order, task, depth), page, per_page)
+    return cdict(Task.get(id, parents, search, sort, order, task, depth), page, per_page)
 
 @bp.route('/task', methods=['PUT'])
 @req
@@ -100,18 +112,37 @@ def edit_task(req_json=None):
             added_tasks.append(_task.dict())
             task.add(_task)
 
-    #task to add to task's parents    
-    parent_id = req_json('parent')
-    if parent_id:
-        try:
-            parent_id = int(parent_id)
-            parent = Task.query.get(parent_id)
-            if not parent:
-                return {'error': f'task {parent_id} was not found'}
-        except:
-            return {'error': 'parent query arg must be of type: number'}
-        parent.add(task)
-    
+    #task to add to task's parents   
+    parents = request.args.get('parents')
+    if parents:
+        if not isinstance(parents, list):
+            return {'error': '"parents" query argument must be a stringified array'}
+        unfound = ''
+        not_numbers = ''
+        for parent_id in parents:
+            try:
+                parent_id = int(parent_id)
+            except:
+                not_numbers.join(f'{parent_id}, ')
+                continue
+            parent_task = Task.query.get(parent_id)
+            if not parent_task:
+                unfound.join(f'{parent_id}, ')
+                continue
+            parent_task.add(task)
+        # There are no spaces after the variable in the f-string because spaces were added when each id was added
+        errors = []
+        if len(not_numbers):
+            errors.append(f'the following provided ids: {not_numbers}are not numbers')
+        if len(unfound):
+            errors.append(f'tasks with ids {unfound}were not found')
+        if len(errors) > 1:
+            return {'errors': errors}
+        else:
+            if len(not_numbers):
+                return {'error': f'the following provided ids: {not_numbers}are not numbers'}
+            if len(unfound):
+                return {'error': f'tasks with ids {unfound}were not found'}
     name = req_json('name') #TODO
 
     positions = req_json('position')
@@ -132,6 +163,22 @@ def edit_task(req_json=None):
         parent = Task.query.get(parent_id)
         parent.add(task)
         task.set_child_position(parent, position)
+
+    shift = req_json('shift')
+    if shift:
+        if not isinstance(shift, dict):
+            return {'error': '"shift" body parameter must be of type: object'}
+        direction = shift['direction']
+        if not isinstance(direction, bool):
+            return {'error': '"direction" attribute of "shift" body parameter must be of type: bool'}
+        parent_id = shift['parent']
+        try:
+            parent_id = int(parent_id)
+            parent = Task.query.get(parent_id)
+        except:
+            return {'error': '"parent" attribute of "shift" body parameter must be of type: number'}
+        task.shift(parent, direction)
+    
     
     done = req_json('done')
     if not isinstance(done, bool):

@@ -10,6 +10,7 @@ def check_type(value, type, ref):
     else:
         return {'error': f'{ref} must be of type: number'}
 
+#TODO
 def check_int(value, ref):
     try:
         value = int(value)
