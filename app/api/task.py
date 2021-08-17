@@ -1,3 +1,4 @@
+import json
 from flask import request
 from app.api import bp
 from app.misc import cdict, check_int
@@ -17,16 +18,35 @@ def get():
             return {'error': 'task query argument must be a number type'} 
 # parents arg:
     parents = request.args.get('parents')
+    _parents = []
+    not_string_array_error = '"parents" query argument does not seem to be a stringified array'
     if parents:
+        try:
+            parents = json.loads(parents)
+        except:
+            return {'error': not_string_array_error}
         if not isinstance(parents, list):
-            return {'error': '"parents" query argument must be a stringified array'}
+            return {'error': not_string_array_error}
+        errors = []
+        unfound = ''
+        not_numbers = ''
         for parent_id in parents:
-            unfound = ''
+            try:
+                parent_id = int(parent_id)
+            except:
+                not_numbers.join(f'{parent_id}, ')
+                continue
             parent_task = Task.query.get(parent_id)
             if not parent_task:
                 unfound.join(f'{parent_id}, ')
-            if len(unfound):
-                return {'error': f'tasks with ids {unfound} were not found'}
+                continue
+            _parents.append(parent_id)
+        if len(unfound):
+            errors.append(f'tasks with ids {unfound} were not found')
+        if len(not_numbers):
+            errors.append(f'provided ids {not_numbers} are not numbers')
+        if len(errors):
+            return {'errors': errors}
 #id arg:    
     id = request.args.get('id')
     if id:
@@ -72,19 +92,20 @@ def get():
         if sort != 'time' or sort != 'alpha':
             return {'error': "sort query argument must be either 'time' or 'alpha'"}
 #final return
-    return cdict(Task.get(id, parents, search, sort, order, task, depth), page, per_page)
+    return cdict(Task.get(id, _parents, search, sort, order, task, depth), page, per_page)
 
 @bp.route('/task', methods=['PUT'])
-@req
-def edit_task(req_json=None):
-    print('.r: ', request.get_json)
+def edit_task():
+    req_json = request.json.get
+    id = request.args.get('id')
     try:
-        task = Task.query.get(req_json('id'))
-        if not task:
-            return {'error': 'task not found'}
+        id = int(id)
     except:
-        return {'error': 'id error'} #TODO
-    
+        return {'error': f'{id} does not seem to be a number, please provide a number id'}
+    task = Task.query.get(id)
+    if not task:
+        return {'error': f'task with provided id {id} was not found'}
+
     add_tasks = req_json('add')
     remove_tasks = req_json('remove')
     
@@ -145,45 +166,55 @@ def edit_task(req_json=None):
                 return {'error': f'tasks with ids {unfound}were not found'}
     name = req_json('name') #TODO
 
+#postion parameter
     positions = req_json('position')
-    if not isinstance(positions, list):
-        return {'error': '"position" body parameter must be of type: array'}
-    for position_obj in positions:
-        if not isinstance(position_obj, dict):
-            return {'error': 'values in "position" body parameter must be of type: object'}
-        try:
-            parent_id = int(position_obj['parent'])
-        except:
-            return {'error': 'parent attribute of value in "position" body parameter must be of type: number'}
-        try:
-            position = int(position_obj['position'])
-        except:
-            return {'error': 'position attribute of value in "position" body parameter must be of type: number'}
-        
-        parent = Task.query.get(parent_id)
-        parent.add(task)
-        task.set_child_position(parent, position)
+    if positions:
+        if not isinstance(positions, list):
+            return {'error': '"position" body parameter must be of type: array'}
+        for position_obj in positions:
+            if not isinstance(position_obj, dict):
+                return {'error': 'values in "position" body parameter must be of type: object'}
+            try:
+                parent_id = int(position_obj['parent'])
+            except:
+                return {'error': 'parent attribute of value in "position" body parameter must be of type: number'}
+            try:
+                position = int(position_obj['position'])
+            except:
+                return {'error': 'position attribute of value in "position" body parameter must be of type: number'}
+            
+            parent = Task.query.get(parent_id)
+            parent.add(task)
+            task.set_child_position(parent, position)
 
+#shift parameter
     shift = req_json('shift')
     if shift:
+        direction = None
+        parent = None
         if not isinstance(shift, dict):
             return {'error': '"shift" body parameter must be of type: object'}
-        direction = shift['direction']
-        if not isinstance(direction, bool):
-            return {'error': '"direction" attribute of "shift" body parameter must be of type: bool'}
-        parent_id = shift['parent']
-        try:
-            parent_id = int(parent_id)
+        if 'direction' in shift:
+            direction = shift['direction']
+            if not isinstance(direction, bool):
+                return {'error': '"direction" attribute of "shift" body parameter must be of type: bool'}
+        if 'parent' in shift:
+            parent_id = shift['parent']
+            try:
+                parent_id = int(parent_id)
+            except:
+                return {'error': '"parent" attribute of "shift" body parameter must be of type: number'}
             parent = Task.query.get(parent_id)
-        except:
-            return {'error': '"parent" attribute of "shift" body parameter must be of type: number'}
-        task.shift(parent, direction)
-    
+            if not parent:
+                return {'error': f'task with id {parent_id} was not found'}
+        if not direction:
+            return {'error': f'a "direction" attribute was not specified in the shift body parameter'}
+        task.shift(direction, parent)
     
     done = req_json('done')
-    if not isinstance(done, bool):
-        return {'error': 'done value is not of type bool'}
-    print('.r: done', done)
+    if done:
+        if not isinstance(done, bool):
+            return {'error': 'done value is not of type bool'}
     
     data = {
         'name': name,
@@ -191,6 +222,7 @@ def edit_task(req_json=None):
     }
     task.edit(data)
     res = {
+        'ok': True,
         'task': task.dict(),
         'added': added_tasks
     }
@@ -212,10 +244,15 @@ def add_task():
     task = Task(name, task)
     return task.dict()
 
-@bp.route('/', methods=['DELETE'])
-@req
-def delete_task(req_json=None):
-    id = req_json('id')
+@bp.route('/task', methods=['DELETE'])
+def delete_task():
+    id = request.args.get('id')
+    try:
+        id = int(id)
+    except:
+        return {'error': f'{id} does not seem to be a number, please provide a number id'}
     task = Task.query.get(id)
+    if not task:
+        return {'error': f'task with provided id {id} was not found'}
     task.delete()
-    return '', 202
+    return {'ok': True}, 202

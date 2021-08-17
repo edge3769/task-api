@@ -69,11 +69,13 @@ class Task(db.Model):
     def move_up(self, parent):
         if not parent:
             current_position = self.global_position
-            new_position = current_position + 1
-            task_above = Task.query.filter(Task.global_position == new_position)
-            task_above.global_position = current_position
-            self.global_position = new_position
-            db.session.commit()
+            if current_position:
+                new_position = current_position + 1
+                task_above = Task.query.filter(Task.global_position == new_position)
+                task_above.global_position = current_position
+                self.global_position = new_position
+                db.session.commit()
+            return
         current_position = self.position(parent)
         new_position = current_position-1
         task_above = Task.query.filter(Task.position(parent)==new_position)
@@ -83,11 +85,13 @@ class Task(db.Model):
     def move_down(self, parent):
         if not parent:
             current_position = self.global_position
-            new_position = current_position - 1
-            task_above = Task.query.filter(Task.global_position == new_position)
-            task_above.global_position = current_position
-            self.global_position = new_position
-            db.session.commit()
+            if current_position:
+                new_position = current_position - 1
+                task_above = Task.query.filter(Task.global_position == new_position)
+                task_above.global_position = current_position
+                self.global_position = new_position
+                db.session.commit()
+            return
         current_position = self.position(parent)
         new_position = current_position+1
         task_below = Task.query.filter(Task.position(parent)==new_position)
@@ -142,6 +146,7 @@ class Task(db.Model):
             return query.get(id)
         if parents:
             for parent_id in parents:
+                print('parent_id: ', parent_id)
                 query = query.filter(Task.parents.any(Task.id==parent_id))
         else:
             query = Task.query.except_(query.join(children, children.c.child == Task.id))
@@ -203,9 +208,9 @@ class Task(db.Model):
         db.session.commit()
 
     def delete(self):
-        db.session.delete(self)
         for task in self.tasks:
             task.delete()
+        db.session.delete(self)
         db.session.commit()
 
     def __init__(self, name, task=None):
