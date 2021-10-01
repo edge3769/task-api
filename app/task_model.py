@@ -140,13 +140,14 @@ class Task(db.Model):
         }
 
     @staticmethod
-    def get(id, parents, search, sort, order, task, depth):
+    def get(id, parents, search, sort, order, depth):
         query = Task.query
         if id:
-            return query.get(id)
-        if parents:
+            query = query.filter(children.c.parent == Task.id)\
+                .filter(children.c.child == id)
+        elif parents:
             for parent_id in parents:
-                print('parent_id: ', parent_id)
+                # print('parent_id: ', parent_id)
                 query = query.filter(Task.parents.any(Task.id==parent_id))
         else:
             query = Task.query.except_(query.join(children, children.c.child == Task.id))
@@ -214,9 +215,15 @@ class Task(db.Model):
         db.session.commit()
 
     def __init__(self, name, task=None):
-        last_position = Task.query.order_by(Task.global_position.desc()).first().global_position
-        if last_position:
-            self.position = last_position + 1
+        last_item = Task.query.order_by(Task.global_position.desc()).first()
+        if last_item:
+            last_position = last_item.global_position
+            if last_position:
+                self.global_position = last_position + 1
+            else:
+                self.global_position = Task.query.count() + 1
+        else:
+            self.global_position = 1
         self.name = name
         if task:
             task.add(self)
