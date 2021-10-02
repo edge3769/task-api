@@ -1,21 +1,19 @@
 from flask import request
+from app.helpers import int_and_get
 from app.api import bp
 from app.task_model import Task
 
 @bp.route('/task', methods=['PUT'])
 def edit_task():
-    req_json = request.json.get
-    id = request.args.get('id')
-    try:
-        id = int(id)
-    except:
-        return {'error': f'{id} does not seem to be a number, please provide a number id'}
-    task = Task.query.get(id)
-    if not task:
-        return {'error': f'task with provided id {id} was not found'}
+    req_data = request.json.get
+    tasks = int_and_get(req_data('tasks'), Task, 'task')
+    addChildren = int_and_get(req_data('addChildren'), Task, 'child')
+    removeChildren = int_and_get(req_data('removeChildren'), Task, 'child')
+    addParents = int_and_get(req_data('addParents'), Task, 'parent')
+    removeParents = int_and_get(req_data('removeParents'), Task, 'parent')
 
-    add_tasks = req_json('add')
-    remove_tasks = req_json('remove')
+    add_tasks = req_data('add')
+    remove_tasks = req_data('remove')
     
     # child tasks to remove from task
     if remove_tasks:
@@ -70,10 +68,10 @@ def edit_task():
                 return {'error': f'the following provided ids: {not_numbers}are not numbers'}
             if len(unfound):
                 return {'error': f'tasks with ids {unfound}were not found'}
-    name = req_json('name') #TODO
+    name = req_data('name') #TODO
 
     #postion parameter
-    positions = req_json('position')
+    positions = req_data('position')
     if positions:
         if not isinstance(positions, list):
             return {'error': '"position" body parameter must be of type: array'}
@@ -94,7 +92,7 @@ def edit_task():
             task.set_child_position(parent, position)
 
     #shift parameter
-    shift = req_json('shift')
+    shift = req_data('shift')
     if shift:
         direction = None
         parent = None
@@ -117,7 +115,7 @@ def edit_task():
             return {'error': f'a "direction" attribute was not specified in the shift body parameter'}
         task.shift(direction, parent)
     
-    done = req_json('done')
+    done = req_data('done')
     if done:
         if not isinstance(done, bool):
             return {'error': 'done value is not of type bool'}
