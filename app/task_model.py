@@ -1,5 +1,6 @@
 import datetime
-from operator import pos
+from os import stat
+from app.helpers import modelNameArray
 
 from sqlalchemy.ext.hybrid import hybrid_property
 from app import db
@@ -36,6 +37,22 @@ class Task(db.Model):
         secondary=assignments,
         backref=db.backref('task', lazy='dynamic'),
         lazy='dynamic')
+
+    @staticmethod
+    def c(name):
+        if isinstance(name, str):
+            task = Task.query.filter(Task.name==name).first()
+        else:
+            task = name
+        if not task:
+            task = Task(name)
+        return task
+
+    def __repr__(self):
+        return f'{self.name}'
+
+    # def __repr__(self) -> str:
+    #     return super().__repr__()
 
     @hybrid_property
     def note(self, parent):
@@ -215,6 +232,8 @@ class Task(db.Model):
         db.session.commit()
 
     def __init__(self, name, task=None):
+        if name != 'God':
+            name = name.lower()
         last_item = Task.query.order_by(Task.global_position.desc()).first()
         if last_item:
             last_position = last_item.global_position
@@ -229,6 +248,51 @@ class Task(db.Model):
             task.add(self)
         db.session.add(self)
         db.session.commit()
+
+    # @staticmethod
+    # def f(task):
+    #     query = Task.query
+    #     task = Task.c(task)
+    #     return query.filter(
+    #         children.c.parent == task.id
+    #     )
+
+    def g(self):
+        return self.i().tasks.all()
+    
+    @staticmethod
+    def add_multiple(tasks, task):
+        pass
+
+    def A(tasks, children=None):
+        if children:
+            for idx, t in enumerate(children):
+                children[idx] = Task.c(t)
+        for idx, t in enumerate(tasks):
+            tasks[idx] = Task.c(t)
+        if children:
+            for t in tasks:
+                for task in children:
+                    t.add(task)
+        if not children:
+            query = Task.query
+            for t in tasks:
+                query = query.filter(Task.parents.any(Task.id==t.id))
+            print(query.all())
+
+    # @staticmethod
+    # def a(str):
+    #     tasks = str.split(' ')
+    #     tasks = modelNameArray(tasks)
+    #     task = tasks.pop()
+    #     for t in tasks:
+    #         t.add(task)
+    #     return tasks
+
+    def i(self, task):
+        task = Task.c(task)
+        self.add(task)
+        return task
 
     def is_child(self, task):
         self.tasks.filter(
@@ -248,7 +312,15 @@ class Task(db.Model):
                 position = 1
             task.set_position(self, position)
 
+    def add_tasks(self, tasks):
+        for task in tasks:
+            self.add(task)
+
     def remove(self, task):
         if self.is_child(task):
             self.tasks.remove(task)
             db.session.commit()
+
+    def remove_tasks(self, tasks):
+        for task in tasks:
+            self.remove(task)
